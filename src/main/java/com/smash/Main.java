@@ -28,6 +28,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 //------------------------------
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.audio.Music;
 
 
 public class Main extends Game {
@@ -48,6 +49,7 @@ public class Main extends Game {
     private float alfaTransicion = 0f;
     //CUANDO DEBERÁ OSCURECERSE
     private boolean realizandoTransicion = false;
+    private Music musicafondo;
 
     @Override
     public void create() {
@@ -56,15 +58,21 @@ public class Main extends Game {
         //ENVIA LAS IMAGANES A LA GPU
         batch = new SpriteBatch();
         //IMAGEN DE FONDO
-        image = new Texture("FondoAdicional.png");
+        image = new Texture("PosibilidadFondo.png");
+        
+        musicafondo = Gdx.audio.newMusic(Gdx.files.internal("Musica/CancionMenu.mp3"));
+        musicafondo.setLooping(true);
+        musicafondo.setVolume(0.5f);
+        musicafondo.play();
+        
         //CONTROL DE CLICS Y TECLADO
         //PREPARA AL ESCENARIO PARA RECIBIR BOTONES
         stage = new Stage(new FillViewport(1920, 1080));
         Gdx.input.setInputProcessor(stage);
         
         //CARGAR IMAGENES DE BOTÓN
-        botonNormal = new Texture("Comenzar-Normal.png");
-        botonMouse = new Texture("Comenzar-Mouse.png");
+        botonNormal = new Texture("Pcomenzar.png");
+        botonMouse = new Texture("PcomenzarMouse.png");
         //CREA LOS DRAWABLES
         //------------------------------------
         TextureRegionDrawable drawableNormal = new TextureRegionDrawable(new TextureRegion(botonNormal));
@@ -99,7 +107,7 @@ public class Main extends Game {
         table.setFillParent(true);
         //ALINEACIÓN DEL BOTÓN
         table.bottom().padBottom(0);
-        table.add(botonComenzar).width(300).height(250);
+        table.add(botonComenzar).width(300).height(400);
         //----------------------
         stage.addActor(table);
     }
@@ -134,6 +142,11 @@ public class Main extends Game {
                 batch.end();
                 //AL MOMENTO QUE YA NO SE VEA LA PANTALLA SEGUIRÁ CON LA NUEVA PANTALLA
                 if (alfaTransicion >= 1.0f) {
+                    if (musicafondo != null) {
+                        musicafondo.stop();
+                        musicafondo.dispose();
+                        musicafondo = null; // Asignamos null para evitar crash por doble liberación
+                    }
                     setScreen(new NuevaPantalla(Main.this));
                 }
             }
@@ -178,5 +191,9 @@ public class Main extends Game {
         //LIMPIEZA DE MEMORIA
         if (transicionTexture != null) transicionTexture.dispose();
         //SI NO SE ESCRIBEN ESTAS INSTRUCCIONES HABRÁ UNA FUGA DE MEMORIA
+        if (musicafondo != null) {
+            musicafondo.dispose();
+            musicafondo = null;
+        }
     }
 }
