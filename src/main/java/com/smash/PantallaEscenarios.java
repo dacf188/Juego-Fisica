@@ -36,6 +36,14 @@ public class PantallaEscenarios implements Screen{
       "Escenarios/Minecraft.png",
       "Escenarios/Monte.png",
     };
+    private final String[] rutasMiniaturas = {
+      "Miniaturas/Abandonado.png",  
+      "Miniaturas/Calle.png",  
+      "Miniaturas/Castillo.png",  
+      "Miniaturas/Espacio.png",  
+      "Miniaturas/Minecraft.png",
+      "Miniaturas/Monte.png",
+    };
     private Array<Texture> texturasCargadas;
     
     public PantallaEscenarios(Main game, Personaje jugador1, Personaje jugador2) {
@@ -80,8 +88,9 @@ public class PantallaEscenarios implements Screen{
         
         for (int i = 0; i < rutasEscenarios.length; i++) {
             final String rutaActual = rutasEscenarios[i];
+            String rutaMiniatura = rutasMiniaturas[i];
             
-            Texture texturaMapa = new Texture(rutaActual);
+            Texture texturaMapa = new Texture(Gdx.files.internal(rutaMiniatura));
             texturasCargadas.add(texturaMapa);
             
             TextureRegionDrawable drawableMapa = new TextureRegionDrawable(new TextureRegion(texturaMapa));
@@ -91,11 +100,12 @@ public class PantallaEscenarios implements Screen{
             int col = i % columnas;
             
             float posX = iniciaX + col * (anchoMapa + espaciadoX);
-            float posY = iniciaY - fila * (anchoMapa + espaciadoY);
+            float posY = iniciaY - fila * (altoMapa + espaciadoY);
             botonMapa.setBounds(posX, posY, anchoMapa, altoMapa);
             botonMapa.addListener(new ChangeListener(){
                @Override
                public void changed(ChangeEvent event, Actor actor){
+                   dispose();
                    game.setScreen(new PantallaPelea(game, jugador1, jugador2, rutaActual));
                }
             });
@@ -134,7 +144,7 @@ public class PantallaEscenarios implements Screen{
 
     @Override
     public void hide() {
-
+        
     }
 
     @Override
