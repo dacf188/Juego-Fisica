@@ -1,5 +1,19 @@
 package com.smash;
 
+import com.smash.personajes.JoelMiller;
+import com.smash.personajes.PatoLucas;
+import com.smash.personajes.Jinx;
+import com.smash.personajes.Kratos;
+import com.smash.personajes.Invencible;
+import com.smash.personajes.IliaTopuria;
+import com.smash.personajes.Gladiador;
+import com.smash.personajes.Homelander;
+import com.smash.personajes.BugsBunny;
+import com.smash.personajes.Catwoman;
+import com.smash.personajes.HarleyQuinn;
+import com.smash.personajes.ArthurMorgan;
+import com.smash.personajes.EllieWiliams;
+import com.smash.personajes.AbbyAnderson;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Texture;

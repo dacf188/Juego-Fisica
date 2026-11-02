@@ -50,6 +50,8 @@ public class Main extends Game {
     //CUANDO DEBERÁ OSCURECERSE
     private boolean realizandoTransicion = false;
     private Music musicafondo;
+    private ImageButton botonComenzar;
+    private boolean bloquarClic = false;
 
     @Override
     public void create() {
@@ -82,7 +84,7 @@ public class Main extends Game {
         buttonStyle.imageUp = drawableNormal; //ESTADO NORMAL
         buttonStyle.imageOver = drawableMouse; //ESTADO CUANDO PASA EL MOUSE
         //INSTANCIAMOS EL IMAGE BUTTON
-        ImageButton botonComenzar = new ImageButton(buttonStyle);
+        botonComenzar = new ImageButton(buttonStyle);
         
         //CREAMOS LA TEXTURA
         //DIBUJA UNA IMAGEN DIRECTAMENTE DE LA RAM
@@ -96,6 +98,9 @@ public class Main extends Game {
         botonComenzar.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
+                if (bloquarClic) {
+                    return;
+                }
                 //ENCENDEMOS EL INTERRUPTOR DE LA TRANSICIÓN
                 realizandoTransicion = true;
                 //DESACTIVAMOS EL BOTÓN PARA EVITAR MULTIPLES CLICS
@@ -112,12 +117,36 @@ public class Main extends Game {
         stage.addActor(table);
     }
 
+    public void volverMenu (){
+        setScreen(null);
+        
+        realizandoTransicion = false;
+        alfaTransicion = 0f;
+        bloquarClic = true;
+        
+        if (botonComenzar != null) {
+            botonComenzar.setDisabled(false);
+            botonComenzar.setChecked(false);
+        }
+        Gdx.input.setInputProcessor(stage);
+        if (musicafondo == null) {
+            musicafondo = Gdx.audio.newMusic(Gdx.files.internal("Musica/CancionMenu.mp3"));
+            musicafondo.setLooping(true);
+            musicafondo.setVolume(0.5f);
+            musicafondo.play();
+        }
+    }
+    
     @Override
     public void render() {
         //SE ENCARGA DE DIFERENCIAR ENTRE LA PANTALLA PRINCIPAL Y LA NUEVA
         if (getScreen() == null) {
             //LIMPIA EL FOTOGRAMA ANTERIOR Y SE ENFOCA EN RGBA
             ScreenUtils.clear(0.10f, 0.10f, 0.10f, 1f);
+            
+            if (bloquarClic) {
+                bloquarClic = false;
+            }
             //PREPARAMOS EL ENVIO DE LA IMAGEN
             batch.begin();
             //AGREGA LA IMAGEN Y SU POSICION EN "X" Y "Y"
@@ -147,6 +176,8 @@ public class Main extends Game {
                         musicafondo.dispose();
                         musicafondo = null; // Asignamos null para evitar crash por doble liberación
                     }
+                    realizandoTransicion = false;
+                    alfaTransicion = 0f;
                     setScreen(new NuevaPantalla(Main.this));
                 }
             }

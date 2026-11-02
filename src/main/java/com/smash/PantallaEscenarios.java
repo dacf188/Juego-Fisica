@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FillViewport;
+import com.badlogic.gdx.audio.Music;
 
 public class PantallaEscenarios implements Screen{
     private final Main game;
@@ -22,6 +23,8 @@ public class PantallaEscenarios implements Screen{
     private Stage stage;
 
     private Texture fondoEscenarios;
+    
+    private Music musicaFondo;
     
     //BOTON
     private Texture regresarNormal;
@@ -58,6 +61,12 @@ public class PantallaEscenarios implements Screen{
         Gdx.input.setInputProcessor(stage);
         texturasCargadas = new Array<>();
         fondoEscenarios = new Texture("PantallaEscenarios.png");
+        
+        musicaFondo = Gdx.audio.newMusic(Gdx.files.internal("Musica/PistaPersonajes.mp3"));
+        musicaFondo.setLooping(true);
+        musicaFondo.setVolume(0.2f);
+        musicaFondo.play();
+        
         //BOTON
         regresarNormal = new Texture("regresarNormal.png");
         regresarMouse = new Texture("regresarMouse.png");
@@ -144,7 +153,9 @@ public class PantallaEscenarios implements Screen{
 
     @Override
     public void hide() {
-        
+        if (musicaFondo != null) {
+            musicaFondo.stop();
+        }
     }
 
     @Override
@@ -153,6 +164,10 @@ public class PantallaEscenarios implements Screen{
         if (fondoEscenarios != null) fondoEscenarios.dispose();
         if (regresarNormal != null) regresarNormal.dispose();
         if (regresarMouse != null) regresarMouse.dispose();
+        if (musicaFondo != null) {
+            musicaFondo.stop();
+            musicaFondo.dispose();
+        }
         for(Texture t : texturasCargadas){
             if (t != null) t.dispose();
         }
