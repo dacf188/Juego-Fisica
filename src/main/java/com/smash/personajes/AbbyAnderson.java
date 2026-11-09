@@ -29,8 +29,17 @@ public class AbbyAnderson extends Personaje{
         Texture ataque1 = new Texture(Gdx.files.internal("Renders2D/Abby/ataque1.png"));
         Texture ataque2 = new Texture(Gdx.files.internal("Renders2D/Abby/ataque2.png"));
         Texture ataque3 = new Texture(Gdx.files.internal("Renders2D/Abby/ataque3.png"));
+    //HERIDO
+        Texture herido = new Texture(Gdx.files.internal("Renders2D/Abby/herido.png"));
+    //BLOQUEO
+       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D/Abby/bloqueo.png"));
+    //MUERTE
+        Texture muerto = new Texture(Gdx.files.internal("Renders2D/Abby/muerte1.png"));
+        Texture muerto1 = new Texture(Gdx.files.internal("Renders2D/Abby/muerte2.png"));
+    //GOLPE ESPECIAL
+        Texture especial = new Texture(Gdx.files.internal("Renders2D/Abby/especial.png"));
         
-        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3);
+        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, muerto1, especial);
     
         Array<TextureRegion> framesCaminar = new Array<>();
         framesCaminar.add(new TextureRegion(cam1));
@@ -50,5 +59,23 @@ public class AbbyAnderson extends Personaje{
         this.poseAtacar1 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque1));
         this.poseAtacar2 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque2));
         this.poseAtacar3 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque3));
+        
+        this.poseHerido = new Animation<TextureRegion>(0.25f, new TextureRegion(herido));
+        this.poseBloquear = new Animation<TextureRegion>(1f, new TextureRegion(bloqueo));
+        
+        Array<TextureRegion> frameMuerte = new Array<>();
+        frameMuerte.add(new TextureRegion(muerto));
+        frameMuerte.add(new TextureRegion(muerto1));
+        this.poseMuerto = new Animation<TextureRegion>(0.25f, frameMuerte);
+        
+        this.poseAtaqueEspecial = new Animation<TextureRegion>(0.3f, new TextureRegion(especial));
+    }
+    @Override
+    public void ejecutarAtaqueEspecial(Personaje oponente){
+        if (oponente != null && getHitboxAtaque().overlaps(oponente.getHitBox())) {
+            boolean atacanteIzquierda = this.x < oponente.getX();
+            oponente.recibirDaño(dañoEspecial, atacanteIzquierda);
+            golpeConectado = true;
+        }
     }
 }

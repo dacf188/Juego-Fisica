@@ -14,8 +14,11 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.controllers.Controller;
+import com.badlogic.gdx.controllers.Controllers;
 
-public class PantallaEscenarios implements Screen{
+public class PantallaEscenarios implements Screen {
+    
     private final Main game;
     private final Personaje jugador1;
     private final Personaje jugador2;
@@ -23,14 +26,19 @@ public class PantallaEscenarios implements Screen{
     private Stage stage;
 
     private Texture fondoEscenarios;
-    
     private Music musicaFondo;
     
-    //BOTON
+    // Botón de retorno al menú anterior
     private Texture regresarNormal;
     private Texture regresarMouse;
     private ImageButton botonRegresar;
-    //RUTA DE ESCENARIOS
+    
+    // Control de mandos y selección de mapas en cuadrícula
+    private Array<ImageButton> botonesMapas;
+    private int indiceCurso = 0;
+    private Texture marcoMapa;
+    
+    // Rutas de los archivos de fondo (escenario completo) y miniaturas para la UI
     private final String[] rutasEscenarios = {
       "Escenarios/Abandonado.png",  
       "Escenarios/Calle.png",  
@@ -55,19 +63,23 @@ public class PantallaEscenarios implements Screen{
         this.jugador2 = jugador2;
         this.batch = game.getBatch();
     }
+
     @Override
-    public void show (){
+    /** Inicializa el escenario, texturas de mapas, audio y la disposición en cuadrícula de la UI. */
+    public void show() {
         stage = new Stage(new FillViewport(1920, 1080), batch);
         Gdx.input.setInputProcessor(stage);
         texturasCargadas = new Array<>();
         fondoEscenarios = new Texture("PantallaEscenarios.png");
+        marcoMapa = new Texture("mapasSelector.png");
         
+        // Configuración y reproducción de la música de fondo
         musicaFondo = Gdx.audio.newMusic(Gdx.files.internal("Musica/PistaPersonajes.mp3"));
         musicaFondo.setLooping(true);
         musicaFondo.setVolume(0.2f);
         musicaFondo.play();
         
-        //BOTON
+        // Configuración del botón de retorno
         regresarNormal = new Texture("regresarNormal.png");
         regresarMouse = new Texture("regresarMouse.png");
         
@@ -77,14 +89,15 @@ public class PantallaEscenarios implements Screen{
         botonRegresar = new ImageButton(estiloRegresar);
         botonRegresar.setBounds(50, 930, 200, 80);
         
-        botonRegresar.addListener(new ChangeListener(){
+        botonRegresar.addListener(new ChangeListener() {
            @Override
-           public void changed (ChangeEvent event, Actor actor){
+           public void changed(ChangeEvent event, Actor actor) {
                game.setScreen(new NuevaPantalla(game));
            }
         });
         stage.addActor(botonRegresar);
         
+        // Parámetros de distribución para la cuadrícula de mapas (3 columnas)
         int columnas = 3;
         float anchoMapa = 380f;
         float altoMapa = 210;
@@ -95,6 +108,9 @@ public class PantallaEscenarios implements Screen{
         float iniciaX = (1920f - anchoTotal) / 2f;
         float iniciaY = 530f;
         
+        botonesMapas = new Array<>();
+        
+        // Generación dinámica de los botones de mapas a partir de sus miniaturas
         for (int i = 0; i < rutasEscenarios.length; i++) {
             final String rutaActual = rutasEscenarios[i];
             String rutaMiniatura = rutasMiniaturas[i];
@@ -111,25 +127,75 @@ public class PantallaEscenarios implements Screen{
             float posX = iniciaX + col * (anchoMapa + espaciadoX);
             float posY = iniciaY - fila * (altoMapa + espaciadoY);
             botonMapa.setBounds(posX, posY, anchoMapa, altoMapa);
-            botonMapa.addListener(new ChangeListener(){
+        
+            botonMapa.addListener(new ChangeListener() {
                @Override
-               public void changed(ChangeEvent event, Actor actor){
+               public void changed(ChangeEvent event, Actor actor) {
                    dispose();
                    game.setScreen(new PantallaPelea(game, jugador1, jugador2, rutaActual));
                }
             });
             stage.addActor(botonMapa);
+            botonesMapas.add(botonMapa);
         }
+        AdministradorMando.reiniciarEstados();
     }
+
     @Override
+    /** Bucle principal: maneja la navegación por mando en la cuadrícula de mapas y el renderizado gráfico. */
     public void render(float delta) {
         ScreenUtils.clear(0f, 0f, 0f, 1f);
         batch.setProjectionMatrix(stage.getViewport().getCamera().combined);
         
+        // Lectura del mando para mover el cursor entre los mapas disponibles
+        Controller mandoJ1 = Controllers.getControllers().size > 0 ? Controllers.getControllers().get(0) : null;
+        if (mandoJ1 != null) {
+            if (AdministradorMando.esDerecha(mandoJ1)) {
+                indiceCurso = (indiceCurso + 1) % botonesMapas.size;
+            } else if (AdministradorMando.esIzquierda(mandoJ1)) {
+                indiceCurso = (indiceCurso - 1 + botonesMapas.size) % botonesMapas.size;
+            } else if (AdministradorMando.esAbajo(mandoJ1)) {
+                indiceCurso = (indiceCurso + 3) % botonesMapas.size; // Salto a la fila inferior
+            } else if (AdministradorMando.esArriba(mandoJ1)) {
+                indiceCurso = (indiceCurso - 3 + botonesMapas.size) % botonesMapas.size; // Salto a la fila superior
+            }
+
+            // Confirmación de selección del mapa activo
+            if (AdministradorMando.esConfirmar(mandoJ1)) {
+                String rutaSeleccionada = rutasEscenarios[indiceCurso];
+                dispose();
+                game.setScreen(new PantallaPelea(game, jugador1, jugador2, rutaSeleccionada));
+            }
+            // Retorno a la pantalla de selección de personajes mediante botón cancelar
+            if (AdministradorMando.esCancelar(mandoJ1)) {
+                dispose();
+                game.setScreen(new NuevaPantalla(game));
+            }
+        }
+        
+        // Renderizado del fondo y los marcos indicadores del mapa seleccionado
         batch.begin();
         if (fondoEscenarios != null) {
             batch.draw(fondoEscenarios, 0, 0, stage.getWidth(), stage.getHeight());
         }
+        
+        if (botonesMapas != null && botonesMapas.size > 0 && marcoMapa != null) {
+            ImageButton botonActual = botonesMapas.get(indiceCurso);
+            batch.draw(marcoMapa, botonActual.getX(), botonActual.getY(), botonActual.getWidth(), botonActual.getHeight());
+        
+            float extraAncho = 24f;
+            float extraAlto = 24f;
+
+            // Doble marco exterior para resaltar el mapa activo con el teclado/mando
+            batch.draw(
+                    marcoMapa,
+                    botonActual.getX() - (extraAncho / 2f),
+                    botonActual.getY() - (extraAlto / 2f),
+                    botonActual.getWidth() + extraAncho,
+                    botonActual.getHeight() + extraAlto
+            );
+        }
+        
         batch.end();
         
         stage.act(delta);
@@ -137,21 +203,21 @@ public class PantallaEscenarios implements Screen{
     }
 
     @Override
+    /** Actualiza el viewport al redimensionar la ventana de la aplicación. */
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
     }
 
     @Override
     public void pause() {
-
     }
 
     @Override
     public void resume() {
-
     }
 
     @Override
+    /** Detiene la música al ocultar o cambiar de pantalla. */
     public void hide() {
         if (musicaFondo != null) {
             musicaFondo.stop();
@@ -159,16 +225,18 @@ public class PantallaEscenarios implements Screen{
     }
 
     @Override
+    /** Libera de la memoria RAM y GPU todas las texturas, escenarios y recursos de audio. */
     public void dispose() {
         if (stage != null) stage.dispose();
         if (fondoEscenarios != null) fondoEscenarios.dispose();
+        if (marcoMapa != null) marcoMapa.dispose();
         if (regresarNormal != null) regresarNormal.dispose();
         if (regresarMouse != null) regresarMouse.dispose();
         if (musicaFondo != null) {
             musicaFondo.stop();
             musicaFondo.dispose();
         }
-        for(Texture t : texturasCargadas){
+        for (Texture t : texturasCargadas) {
             if (t != null) t.dispose();
         }
     }

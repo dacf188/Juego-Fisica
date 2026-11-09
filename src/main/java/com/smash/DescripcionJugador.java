@@ -13,7 +13,7 @@ public class DescripcionJugador {
     private Label infoJ2;
     private BitmapFont fuenteInfo;
     
-    public DescripcionJugador (Viewport viewport, com.badlogic.gdx.graphics.g2d.SpriteBatch batch){
+    public DescripcionJugador(Viewport viewport, com.badlogic.gdx.graphics.g2d.SpriteBatch batch) {
         stageHud = new Stage(viewport, batch);
         
         fuenteInfo = new BitmapFont();
@@ -22,15 +22,19 @@ public class DescripcionJugador {
         estiloInfo.font = fuenteInfo;
         estiloInfo.fontColor = Color.WHITE;
         
+        // Etiqueta de depuración para el Jugador 1 (esquina superior izquierda)
         infoJ1 = new Label("", estiloInfo);
         infoJ1.setPosition(20f, 850F);
         stageHud.addActor(infoJ1);
         
+        // Etiqueta de depuración para el Jugador 2 (esquina superior derecha)
         infoJ2 = new Label("", estiloInfo);
         infoJ2.setPosition(1525f, 850F);
         stageHud.addActor(infoJ2);
     }
-    public void actualizar (Personaje j1, Personaje j2){
+
+    // Actualiza los textos de depuración con las propiedades físicas actuales de cada jugador
+    public void actualizar(Personaje j1, Personaje j2) {
         if (j1 != null) {
             Rectangle hb1 = j1.getHitBox();
             infoJ1.setText(String.format("--- JUGADOR 1: FÍSICAS ---\n" +
@@ -66,15 +70,19 @@ public class DescripcionJugador {
                     j2.getVida()));
         }
     }
+
+    // Renderiza el HUD de depuración en pantalla
     public void render(float delta) {
         stageHud.act(delta);
         stageHud.draw();
     }
 
+    // Ajusta el viewport al cambiar el tamaño de la ventana
     public void resize(int width, int height) {
         stageHud.getViewport().update(width, height, true);
     }
 
+    // Libera los recursos de memoria al cerrar la pantalla
     public void dispose() {
         if (stageHud != null) stageHud.dispose();
         if (fuenteInfo != null) fuenteInfo.dispose();

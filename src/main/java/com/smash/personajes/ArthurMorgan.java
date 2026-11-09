@@ -30,8 +30,16 @@ public class ArthurMorgan extends Personaje{
         Texture ataque1 = new Texture(Gdx.files.internal("Renders2D/ArthurMorgan/ataque1.png"));
         Texture ataque2 = new Texture(Gdx.files.internal("Renders2D/ArthurMorgan/ataque2.png"));
         Texture ataque3 = new Texture(Gdx.files.internal("Renders2D/ArthurMorgan/ataque3.png"));
+    //HERIDO
+        Texture herido = new Texture(Gdx.files.internal("Renders2D/HarleyQuinn/.png"));
+    //BLOQUEO
+       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D/HarleyQuinn/.png"));
+    //MUERTE
+        Texture muerto = new Texture(Gdx.files.internal("Renders2D/HarleyQuinn/.png"));
+    //GOLPE ESPECIAL
+        Texture especial = new Texture(Gdx.files.internal("Renders2D/HarleyQuinn/.png"));
         
-        texturasCombate.addAll(cam1, cam2, cam3, cam4,salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3);
+        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, especial);
     
         Array<TextureRegion> framesCaminar = new Array<>();
         framesCaminar.add(new TextureRegion(cam1));
@@ -52,5 +60,14 @@ public class ArthurMorgan extends Personaje{
         this.poseAtacar1 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque1));
         this.poseAtacar2 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque2));
         this.poseAtacar3 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque3));
+        
+        this.poseHerido = new Animation<TextureRegion>(0.25f, new TextureRegion(herido));
+        this.poseBloquear = new Animation<TextureRegion>(1f, new TextureRegion(bloqueo));
+        this.poseMuerto = new Animation<TextureRegion>(1f, new TextureRegion(muerto));
+        this.poseAtaqueEspecial = new Animation<TextureRegion>(0.3f, new TextureRegion(especial));
+    }
+    @Override
+    public void ejecutarAtaqueEspecial(Personaje oponente) {
+
     }
 }

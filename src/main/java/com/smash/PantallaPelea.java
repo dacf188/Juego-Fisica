@@ -22,7 +22,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.controllers.ControllerAdapter;
 import com.smash.Pantallas.PantallaResultados;
 
-public class PantallaPelea implements Screen{
+public class PantallaPelea implements Screen {
+    
     private final Main game;
     private final Personaje jugador1;
     private final Personaje jugador2;
@@ -32,15 +33,16 @@ public class PantallaPelea implements Screen{
     private Stage stage;
     private Texture mapaCombate;
     
+    // Posición base del suelo en el eje Y para las físicas de los personajes
     private final float suelo_Y = 100f;
     
-    //CRONOMETRO
+    // Cronómetro de combate
     private float tiempoPelea = 90f;
     private Label labelCronometro;
     private Label.LabelStyle estiloLabel;
     private BitmapFont fuenteCronometro;
     
-    //VARIABLES BARRAS DE VIDA
+    // Control de valores y dimensiones de las barras de vida
     private float vidaMax = 100f;
     private float vidaActualJ1 = 100f;
     private float vidaActualJ2 = 100f;
@@ -48,67 +50,70 @@ public class PantallaPelea implements Screen{
     private float anchoBarra = 650f;
     private float altoBarra = 35f;
     private Texture texturaPixel;
-    
-    //IMAGEN PARA LAS BARRAS DE VIDA
     private Texture texturaBarra;
     
-    //VISUAL J1
+    // Elementos visuales de interfaz del Jugador 1
     private Image fondoJ1;
     private Image vidaJ1;
     private float posXJ1 = 200f;
     
-    //VISUAL J2
+    // Elementos visuales de interfaz del Jugador 2
     private Image fondoJ2;
     private Image vidaJ2;
     private float posXJ2 = 1070f;
     
-    //VARIABLES PARA MENÚ DE PAUSA
+    // Variables de control para el menú de pausa
     private boolean juegoPausado = false;
     private Stage stagePausa;
     private Label labelPausa;
     private Texture texturaFondoOscuro;
     private boolean solicitarPausa = false;
     
-    //PANTALLA DE CARGA
+    // Efectos de transición y depuración de jugadores
     private Transicion transicion;
-
-    //DESCRIPCIÓN JUGADORES
     private DescripcionJugador descripcionJugador;
     
-    //VARIABLES DE TERMINAR BATALLA
+    // Control de finalización del combate y resultados
     private boolean combateTerminado = false;
     private String mensaje = "";
     private float temporizadorResultado = 0f;
-    
-    //PANTALLA RESULTADOS
     private PantallaResultados pantallaResultados;
     
+    private Music musicaFico; // (Música de fondo del combate)
     private Music musicaFondo;
 
     public PantallaPelea(Main game, Personaje jugador1, Personaje jugador2, String rutaMapa) {
         this.game = game;
         this.jugador1 = jugador1;
-        this.jugador2 = jugador2;
+        // Evita referencias duplicadas clonando el personaje si se selecciona el mismo para ambos jugadores
+        this.jugador2 = (jugador1 != null && jugador1 == jugador2) ? crearCopia(jugador2) : jugador2;
         this.rutamapa = rutaMapa;
         this.batch = game.getBatch();
         this.mapaCombate = new Texture(rutaMapa);
     }
 
+    /** Crea una copia independiente del personaje seleccionado en caso de espejo (mismo luchador). */
+    private Personaje crearCopia(Personaje original) {
+        try {
+            return original.getClass().getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return original;
+        }
+    }
+
     @Override
+    /** Inicializa cronómetros, barras de vida, música, posiciones y controladores para la pelea. */
     public void show() {
-        combateTerminado = false; // Limpiamos la bandera de combate terminado
-        tiempoPelea = 90f;        // Reiniciamos el cronómetro
+        combateTerminado = false;
+        tiempoPelea = 90f;
         
-        // 👉 RESTABLECEMOS LAS VIDAS AL MÁXIMO AL ENTRAR A LA PANTALLA (Y EN REVANCHA)
+        // Restablecimiento de salud al entrar o reiniciar el combate
         vidaActualJ1 = vidaMax;
         vidaActualJ2 = vidaMax;
 
-        if (jugador1 != null) {
-            jugador1.setVida(vidaMax); // Asegura que el objeto del jugador recuperesu salud interna
-        }
-        if (jugador2 != null) {
-            jugador2.setVida(vidaMax); // Asegura que el objeto del jugador recupere su salud interna
-        }
+        if (jugador1 != null) jugador1.setVida(vidaMax);
+        if (jugador2 != null) jugador2.setVida(vidaMax);
 
         transicion = new Transicion();
         transicion.iniciar();
@@ -132,26 +137,8 @@ public class PantallaPelea implements Screen{
         labelCronometro = new Label("90", estiloLabel);
         labelCronometro.setPosition(910f, 950f);
         stage.addActor(labelCronometro);
-        
-        transicion = new Transicion();
-        transicion.iniciar();
-        stage = new Stage(new FillViewport(1920, 1080), batch);
-        Gdx.input.setInputProcessor(stage);
 
-        descripcionJugador = new DescripcionJugador(stage.getViewport(), batch);
-
-        fuenteCronometro = new BitmapFont();
-        fuenteCronometro.getData().setScale(6.0f);
-
-        estiloLabel = new Label.LabelStyle();
-        estiloLabel.font = fuenteCronometro;
-        estiloLabel.fontColor = Color.WHITE;
-
-        labelCronometro = new Label("90", estiloLabel);
-        labelCronometro.setPosition(910f, 950f);
-        stage.addActor(labelCronometro);
-
-        //TEXTURA DE PIXEL BARRA
+        // Generación de texturas básicas para las barras de salud
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.WHITE);
         pixmap.fill();
@@ -164,51 +151,50 @@ public class PantallaPelea implements Screen{
 
         float paddingX = 17f;
         float paddingY = 10f;
-
         float anchoInterno = anchoBarra - (paddingX * 2);
         float altoInterno = altoBarra - (paddingY * 2);
 
+        // HUD - Barra de vida del Jugador 1
         Image marcoJ1 = new Image(texturaBarra);
         marcoJ1.setSize(anchoBarra, altoBarra + 10f);
         marcoJ1.setPosition(posXJ1, 980f);
         stage.addActor(marcoJ1);
 
-        //JUGADOR 1 -- BARRA DE VIDA
         fondoJ1 = new Image(texturaPixel);
         fondoJ1.setSize(anchoInterno, altoInterno);
         fondoJ1.setPosition(posXJ1 + paddingX, 980f + paddingY);
         fondoJ1.setColor(Color.BLACK);
         stage.addActor(fondoJ1);
-        //VIDA ROJA ACTIVA
+
         vidaJ1 = new Image(texturaPixel);
         vidaJ1.setSize(anchoInterno, altoInterno);
         vidaJ1.setPosition(posXJ1 + paddingX, 980f + paddingY);
         vidaJ1.setColor(Color.RED);
         stage.addActor(vidaJ1);
 
+        // HUD - Barra de vida del Jugador 2
         Image marcoJ2 = new Image(texturaBarra);
         marcoJ2.setSize(anchoBarra, altoBarra + 10f);
         marcoJ2.setPosition(posXJ2, 980f);
         stage.addActor(marcoJ2);
 
-        //JUGADOR 2 -- BARRA DE VIDA
         fondoJ2 = new Image(texturaPixel);
         fondoJ2.setSize(anchoInterno, altoInterno);
         fondoJ2.setPosition(posXJ2 + paddingX, 980f + paddingY);
         fondoJ2.setColor(Color.BLACK);
         stage.addActor(fondoJ2);
-        //VIDA ROJA ACTIVA
+
         vidaJ2 = new Image(texturaPixel);
         vidaJ2.setSize(anchoInterno, altoInterno);
         vidaJ2.setPosition(posXJ2 + paddingX, 980f + paddingY);
         vidaJ2.setColor(Color.RED);
         stage.addActor(vidaJ2);
 
-        //INTERFAZ DEL MENÚ DE PAUSA
+        // Configuración de la interfaz del menú de pausa
         stagePausa = new Stage(new FillViewport(1920, 1080), batch);
 
         Pixmap pixmapPausa = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-        pixmapPausa.setColor(new Color(0, 0, 0, 0.8f)); // Fondo semitransparente
+        pixmapPausa.setColor(new Color(0, 0, 0, 0.8f));
         pixmapPausa.fill();
         texturaFondoOscuro = new Texture(pixmapPausa);
         pixmapPausa.dispose();
@@ -227,44 +213,39 @@ public class PantallaPelea implements Screen{
         labelPausa.setPosition(200f, 550f);
         stagePausa.addActor(labelPausa);
 
+        // Escucha de eventos de mandos para detectar el botón Start (Pausa)
         Controllers.addListener(new ControllerAdapter() {
             @Override
             public boolean buttonDown(Controller controller, int buttonIndex) {
-                // El índice 7 suele ser Start en la mayoría de mandos estándar de juego
-                if (buttonIndex == 7) {
+                if (buttonIndex == 7) { // Índice estándar del botón Start
                     solicitarPausa = true;
                 }
                 return false;
             }
         });
 
-        System.out.println("MANDOS DETECTADOS");
+        // Posicionamiento inicial de los jugadores en el escenario de combate
         Array<Controller> mandos = Controllers.getControllers();
 
         if (jugador1 != null) {
+            jugador1.reiniciarCombate();
             jugador1.cargarPosesCombate();
-            jugador1.setPosicion(300f, suelo_Y);
+            jugador1.setPosicion(230f, suelo_Y);
             jugador1.setJugador2(false);
-            if (mandos.size > 0) {
-                jugador1.setMando(mandos.get(0));
-            } else {
-                jugador1.setMando(null);
-            }
+            jugador1.setMando(mandos.size > 0 ? mandos.get(0) : null);
         }
         if (jugador2 != null) {
+            jugador2.reiniciarCombate();
             jugador2.cargarPosesCombate();
-            jugador2.setPosicion(1500f, suelo_Y);
+            jugador2.setPosicion(1440f, suelo_Y);
             jugador2.setMirandoIzquierda(true);
             jugador2.setJugador2(true);
-            if (mandos.size > 1) {
-                jugador2.setMando(mandos.get(1));
-            } else if (mandos.size == 1) {
-                jugador2.setMando(null);
-            }
+            jugador2.setMando(mandos.size > 1 ? mandos.get(1) : (mandos.size == 1 ? null : null));
         }
     }
 
     @Override
+    /** Bucle principal: controla pausa, transiciones, temporizador, físicas, colisiones, daños y renderizado. */
     public void render(float delta) {
 
         // 1. GESTIÓN DE PAUSA
@@ -278,6 +259,7 @@ public class PantallaPelea implements Screen{
         
         descripcionJugador.actualizar(jugador1, jugador2);
 
+        // Renderizado del menú de pausa en caso de estar activo
         if (juegoPausado) {
             String infoJ1 = (jugador1 != null)
                     ? String.format("JUGADOR 1 (Cinemática y Estado):\n- Posición X: %.2f | Y: %.2f\n- Velocidad X: %.2f | Y: %.2f\n- Estado: %s\n- Vida: %.1f\n- En Suelo: %b",
@@ -302,19 +284,19 @@ public class PantallaPelea implements Screen{
             return;
         }
 
-        // 2. PANTALLA DE RESULTADOS (PRIORIDAD ABSOLUTA Y SEGURA)
+        // 2. PANTALLA DE RESULTADOS (PRIORIDAD ABSOLUTA)
         if (combateTerminado && pantallaResultados != null) {
             batch.begin();
             batch.draw(mapaCombate, 0, 0, stage.getWidth(), stage.getHeight());
-            if (jugador1 != null) jugador1.renderizarPelea(batch, 0);
-            if (jugador2 != null) jugador2.renderizarPelea(batch, 0);
+            if (jugador1 != null) jugador1.renderizarPelea(batch, delta);
+            if (jugador2 != null) jugador2.renderizarPelea(batch, delta);
             batch.end();
 
             pantallaResultados.render(delta);
-            return; // Detenemos totalmente el render para congelar el combate bajo los resultados
+            return;
         }
 
-        // 3. TRANSICIÓN INICIAL
+        // 3. TRANSICIÓN INICIAL DE ENTRADA
         transicion.actualizar(delta);
 
         if (!transicion.haTerminado()) {
@@ -347,8 +329,6 @@ public class PantallaPelea implements Screen{
                             nombreGanador = null;
                         }
                         pantallaResultados = new PantallaResultados(stage.getViewport(), batch, mensaje, nombreGanador, game, jugador1, jugador2, rutamapa);
-                        
-                        // 👉 DISPARAMOS EL AUDIO UNA SOLA VEZ AQUÍ AL ACABAR POR TIEMPO
                         boolean esEmpate = mensaje.equals("EMPATE");
                         pantallaResultados.reproducirAudioResultado(esEmpate, nombreGanador);
                     }
@@ -357,6 +337,7 @@ public class PantallaPelea implements Screen{
                 }
             }
 
+            // Validación de fin de combate por agotamiento de vida (K.O.)
             if ((vidaActualJ1 <= 0 || vidaActualJ2 <= 0) && !combateTerminado) {
                 combateTerminado = true;
                 String nombreGanador = null;
@@ -373,11 +354,10 @@ public class PantallaPelea implements Screen{
                     nombreGanador = (jugador1 != null) ? jugador1.getNombre() : "Jugador 1";
                 }
                 pantallaResultados = new PantallaResultados(stage.getViewport(), batch, mensaje, nombreGanador, game, jugador1, jugador2, rutamapa);
-                
-                // 👉 DISPARAMOS EL AUDIO UNA SOLA VEZ AQUÍ AL QUEDARSE SIN VIDA
                 pantallaResultados.reproducirAudioResultado(esEmpate, nombreGanador);
             }
             
+            // Actualización de entradas y físicas de los combatientes
             if (!combateTerminado) {
                 if (jugador1 != null) {
                     jugador1.procesarEntrada(jugador2);
@@ -388,11 +368,12 @@ public class PantallaPelea implements Screen{
                     jugador2.actualizarFisicas(delta, suelo_Y);
                 }
 
-                // COLISIONES
+                // GESTIÓN DE COLISIONES Y DETECCIÓN DE GOLPES
                 if (jugador1 != null && jugador2 != null) {
                     Rectangle hitbox1 = jugador1.getHitBox();
                     Rectangle hitbox2 = jugador2.getHitBox();
 
+                    // Colisión física de cuerpos (evita que se atreviesen)
                     if (hitbox1.overlaps(hitbox2)) {
                         float centro1 = jugador1.getX() + (hitbox1.width / 2);
                         float centro2 = jugador2.getX() + (hitbox1.width / 2);
@@ -407,6 +388,7 @@ public class PantallaPelea implements Screen{
                             jugador2.setX(jugador2.getX() - (interseccion.width / 2f));
                         }
                     }
+                    // Impacto de ataque del Jugador 1 hacia el Jugador 2
                     if (jugador1.getEstado() == Personaje.Estado.atacar && !jugador1.getGolpeConectado()) {
                         if (jugador1.getHitboxAtaque().overlaps(jugador2.getHitBox())) {
                             boolean atacanteIzquierda = jugador1.getX() < jugador2.getX();
@@ -414,6 +396,7 @@ public class PantallaPelea implements Screen{
                             jugador1.setGolpeConectado(true);
                         }
                     }
+                    // Impacto de ataque del Jugador 2 hacia el Jugador 1
                     if (jugador2.getEstado() == Personaje.Estado.atacar && !jugador2.getGolpeConectado()) {
                         if (jugador2.getHitboxAtaque().overlaps(jugador1.getHitBox())) {
                             boolean atacanteIzquierda = jugador2.getX() < jugador1.getX();
@@ -426,7 +409,7 @@ public class PantallaPelea implements Screen{
                 if (jugador2 != null) vidaActualJ2 = jugador2.getVida();
             }
 
-            // SINCRONIZAR BARRAS DE VIDA GRÁFICAMENTE
+            // Sincronización gráfica de las barras de salud en el HUD
             float anchoInterno = anchoBarra - 34f;
 
             float porcentajeJ1 = vidaActualJ1 / vidaMax;
@@ -439,7 +422,7 @@ public class PantallaPelea implements Screen{
             vidaJ2.setWidth(nuevoAnchoJ2);
             vidaJ2.setX((posXJ2 + 10f) + (anchoInterno - nuevoAnchoJ2));
 
-            // RENDERIZADO VISUAL DEL COMBATE
+            // Renderizado visual del escenario y los personajes en combate
             batch.setColor(Color.WHITE);
             batch.begin();
             batch.draw(mapaCombate, 0, 0, stage.getWidth(), stage.getHeight());
@@ -449,7 +432,7 @@ public class PantallaPelea implements Screen{
             batch.end();
         }
 
-        // 5. INTERFAZ GENERAL DE LA PELEA (HUD) - Solo si el combate sigue activo
+        // 5. RENDERIZADO DEL HUD GENERAL
         if (!combateTerminado) {
             stage.act(delta);
             stage.draw();
@@ -458,6 +441,7 @@ public class PantallaPelea implements Screen{
     }
 
     @Override
+    /** Actualiza viewports y HUD al redimensionar la ventana. */
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
         stagePausa.getViewport().update(width, height, true);
@@ -473,6 +457,7 @@ public class PantallaPelea implements Screen{
     }
 
     @Override
+    /** Detiene la música al ocultar o salir de la pantalla de pelea. */
     public void hide() {
         if (musicaFondo != null) {
             musicaFondo.stop();
@@ -480,10 +465,11 @@ public class PantallaPelea implements Screen{
     }
 
     @Override
+    /** Libera los recursos de memoria RAM y GPU utilizados en el combate. */
     public void dispose() {
         if (descripcionJugador != null) descripcionJugador.dispose();
         if (transicion != null) transicion.dispose();
-        if (stage != null)stage.dispose();
+        if (stage != null) stage.dispose();
         if (stagePausa != null) stagePausa.dispose();
         if (texturaFondoOscuro != null) texturaFondoOscuro.dispose();
         if (mapaCombate != null) mapaCombate.dispose();

@@ -14,22 +14,23 @@ import com.badlogic.gdx.controllers.Controller;
 import com.badlogic.gdx.math.Rectangle;
 
 public abstract class Personaje {
-    protected Controller mando;
-    public void setMando(Controller mando) {
-        this.mando = mando;
-    }
+
+    // ==========================================
+    // ATRIBUTOS Y VARIABLES
+    // ==========================================
+    
     protected String nombre;
     protected Texture icono;
     protected Texture render2d;
     protected float menuX, menuY, anchoIcono, altoIcono;
     protected Sound seleccion;
 
-
     public enum Estado {
-        idle, caminar, saltar, agachar, atacar, herido
+        idle, caminar, saltar, agachar, atacar, herido, bloquear, muerto, ataqueEspecial
     }
     protected Estado estadoActual = Estado.idle;
 
+    // Animaciones de combate
     protected Animation<TextureRegion> poseIdle;
     protected Animation<TextureRegion> poseCaminar;
     protected Animation<TextureRegion> poseSaltar;
@@ -38,11 +39,15 @@ public abstract class Personaje {
     protected Animation<TextureRegion> poseAtacar2;
     protected Animation<TextureRegion> poseAtacar3;
     protected Animation<TextureRegion> poseHerido;
-
-    protected float stateTime = 0f;
+    protected Animation<TextureRegion> poseBloquear;
+    protected Animation<TextureRegion> poseMuerto;
+    protected Animation<TextureRegion> poseAtaqueEspecial;
     
+    protected float dañoEspecial = 10f;
+    protected float stateTime = 0f;
     protected Array<Texture> texturasCombate = new Array<>();
 
+    // Posición y físicas
     protected float x, y;
     protected float velocidadX = 0;
     protected float velocidadY = 0;
@@ -53,27 +58,24 @@ public abstract class Personaje {
     protected final float fuerza_Salto = 500f;
     protected final float gravedad = 1200f;
     protected float altoCombate = 650;
-    
+
+    // Controladores y jugadores
+    protected Controller mando;
     protected boolean jugador2 = false;
     protected boolean botonAnterior = false;
+    protected boolean botonEspecialAnterior = false;
     
-    //CONTROL DE ATAQUE
+    // Combos y salud
     protected int combo = 0;
     protected float temporizadorCombo = 0f;
     protected final float tiempoMax = 0.6f;
-    
-    //CONTROL DE DAÑO Y GOLPES
     protected float vida = 100f;
     protected boolean golpeConectado = false;
-    
-    public void setMirandoIzquierda(boolean mirandoIzquierda) {
-        this.mirandoIzquierda = mirandoIzquierda;
-    }
-    
-    public void setJugador2(boolean jugador2){
-        this.jugador2 = jugador2;
-    }
 
+    // ==========================================
+    // CONSTRUCTOR
+    // ==========================================
+    
     public Personaje(String nombre, String icono, String render2d, float menuX, float menuY, String seleccion) {
         this.nombre = nombre;
         this.icono = new Texture(icono);
@@ -86,68 +88,141 @@ public abstract class Personaje {
             this.seleccion = Gdx.audio.newSound(Gdx.files.internal("SonidosNombres/" + seleccion));
         }
     }
+
+    // ==========================================
+    // GETTERS Y SETTERS
+    // ==========================================
+    
+    public void setMando(Controller mando) { this.mando = mando; }
+    public void setMirandoIzquierda(boolean mirandoIzquierda) { this.mirandoIzquierda = mirandoIzquierda; }
+    public void setJugador2(boolean jugador2) { this.jugador2 = jugador2; }
+    public Texture getRender2d() { return render2d; }
+
+    public void setEstado(Estado nuevoEstado) {
+        if (this.estadoActual != nuevoEstado) {
+            this.estadoActual = nuevoEstado;
+            this.stateTime = 0f;
+            if (nuevoEstado == Estado.atacar || nuevoEstado == Estado.ataqueEspecial) {
+                golpeConectado = false;
+            }
+        }
+    }
+
+    public Estado getEstado() { return this.estadoActual; }
+    public void setPosicion(float x, float y) { this.x = x; this.y = y; }
+    public void setX(float x) { this.x = x; }
+    public float getX() { return x; }
+    public float getY() { return y; }
+    public float getVida() { return vida; }
+    public void setVida(float vida) { this.vida = vida; }
+    public boolean getGolpeConectado() { return golpeConectado; }
+    public void setGolpeConectado(boolean golpeConectado) { this.golpeConectado = golpeConectado; }
+    public int getCombo() { return combo; }
+    public String getNombre() { return this.nombre; }
+    
+    public float getDañoActual() {
+        if (estadoActual == Estado.ataqueEspecial) {
+            return dañoEspecial;
+        }
+        return 0f;
+    }
+
+    // ==========================================
+    // MÉTODOS DE LA CLASE (LÓGICA Y COMBATE)
+    // ==========================================
     
     public abstract void cargarPosesCombate();
-    
-    public void procesarEntrada (Personaje oponente){
+    public abstract void ejecutarAtaqueEspecial(Personaje oponente);
+
+    /** Selecciona si procesa la entrada física mediante un gamepad o el teclado. */
+    public void procesarEntrada(Personaje oponente) {
         if (mando != null) {
             procesarEntradaMando(oponente);
         } else {
             procesarEntradaTeclado(oponente);
         }
     }
+
+    /** Verifica si el personaje se encuentra ejecutando una acción prioritaria o bloqueante. */
+    private boolean estaOcupado() {
+        return estadoActual == Estado.atacar || 
+               estadoActual == Estado.ataqueEspecial || 
+               estadoActual == Estado.bloquear || 
+               estadoActual == Estado.herido || 
+               estadoActual == Estado.muerto;
+    }
     
+    /** Restablece los valores iniciales del personaje para iniciar un nuevo combate. */
+    public void reiniciarCombate() {
+        estadoActual = Estado.idle;
+        stateTime = 0f;
+        vida = 100f;
+        velocidadX = 0;
+        velocidadY = 0;
+        enSuelo = true;
+        combo = 0;
+        temporizadorCombo = 0f;
+        golpeConectado = false;
+        botonAnterior = false;
+        botonEspecialAnterior = false;
+    }
+    
+    /** Lee los joysticks y botones de un mando físico de PlayStation 4 para mover o atacar. */
     private void procesarEntradaMando(Personaje oponente) {
-        if (estadoActual == Estado.herido) {
+        if (estadoActual == Estado.herido || estadoActual == Estado.muerto) {
             velocidadX = 0;
             return;
         }
-        // En mandos de PS/Xbox, el Axis 0 corresponde al D-Pad horizontal o Stick analógico izquierdo
-        float ejeX = mando.getAxis(0); 
+        
+        float ejeX = mando.getAxis(0);
 
-        // 1. MOVIMIENTO HORIZONTAL (Stick analógico o Cruceta)
+        // 1. Movimiento horizontal mediante stick izquierdo o D-Pad del mando de PS4
         if (ejeX < -0.3f || mando.getButton(mando.getMapping().buttonDpadLeft)) {
             velocidadX = -velocidad_Movimiento;
             mirandoIzquierda = true;
-            if (enSuelo && estadoActual != Estado.atacar) setEstado(Estado.caminar);
+            if (enSuelo && !estaOcupado()) setEstado(Estado.caminar);
         } else if (ejeX > 0.3f || mando.getButton(mando.getMapping().buttonDpadRight)) {
             velocidadX = velocidad_Movimiento;
             mirandoIzquierda = false;
-            if (enSuelo && estadoActual != Estado.atacar) setEstado(Estado.caminar);
+            if (enSuelo && !estaOcupado()) setEstado(Estado.caminar);
         } else {
             velocidadX = 0;
-            if (enSuelo && estadoActual != Estado.agachar && estadoActual != Estado.atacar) {
-                setEstado(Estado.idle);
-            }
+            if (enSuelo && estadoActual != Estado.agachar && !estaOcupado()) setEstado(Estado.idle);
         }
 
-        // 2. AGACHARSE (Cruceta Abajo o Stick hacia abajo)
+        // 2. Bloqueo mapeado al botón Círculo (buttonB) del mando de PS4
+        boolean presionaBloqueo = mando.getButton(mando.getMapping().buttonB);
+        if (presionaBloqueo && enSuelo && estadoActual != Estado.atacar && estadoActual != Estado.ataqueEspecial) {
+            setEstado(Estado.bloquear);
+            velocidadX = 0;
+        } else if (estadoActual == Estado.bloquear && !presionaBloqueo) {
+            setEstado(Estado.idle);
+        }
+
+        // 3. Agacharse mediante stick izquierdo abajo o D-Pad Abajo en el mando de PS4
         float ejeY = mando.getAxis(1);
         boolean presionaAbajo = ejeY > 0.4f || mando.getButton(mando.getMapping().buttonDpadDown);
         if (presionaAbajo) {
-            if (enSuelo && estadoActual != Estado.atacar) {
+            if (enSuelo && !estaOcupado()) {
                 setEstado(Estado.agachar);
                 velocidadX = 0;
             }
         } else {
-            if (estadoActual == Estado.agachar && enSuelo && estadoActual != Estado.atacar) {
-                setEstado(Estado.idle);
-            }
+            if (estadoActual == Estado.agachar && enSuelo) setEstado(Estado.idle);
         }
 
-        // 3. SALTAR (Botón Equis 'X' / 'A' en mapping estándar)
-        if (mando.getButton(mando.getMapping().buttonA) && enSuelo && estadoActual != Estado.atacar) {
+        // 4. Salto mapeado al botón Equis / X (buttonA) del mando de PS4
+        if (mando.getButton(mando.getMapping().buttonA) && enSuelo && estadoActual != Estado.atacar && estadoActual != Estado.ataqueEspecial && estadoActual != Estado.bloquear) {
             velocidadY = fuerza_Salto;
             enSuelo = false;
             setEstado(Estado.saltar);
         }
-        //ATAQUE
+
+        // 5. Ataque normal y cadena de combos mapeados al botón Cuadrado (buttonX) del mando de PS4
         boolean botonAhora = mando.getButton(mando.getMapping().buttonX);
-        if (botonAhora && !botonAnterior && enSuelo) {
-            if (estadoActual != Estado.atacar) {
-                if (oponente != null) {
-                    this.mirandoIzquierda = (this.x > oponente.getX());
-                }
+        if (botonAhora && !botonAnterior && enSuelo && estadoActual != Estado.bloquear) {
+            if (estadoActual != Estado.atacar && estadoActual != Estado.ataqueEspecial) {
+                if (oponente != null) this.mirandoIzquierda = (this.x > oponente.getX());
                 combo = 1;
                 setEstado(Estado.atacar);
                 velocidadX = 0;
@@ -163,56 +238,66 @@ public abstract class Personaje {
             }
         }
         botonAnterior = botonAhora;
+
+        // 6. Ataque especial mapeado al botón Triángulo (buttonY) del mando de PS4
+        boolean botonEspecialAhora = mando.getButton(mando.getMapping().buttonY);
+        if (botonEspecialAhora && !botonEspecialAnterior && enSuelo && !estaOcupado()) {
+            if (oponente != null) this.mirandoIzquierda = (this.x > oponente.getX());
+            setEstado(Estado.ataqueEspecial);
+            velocidadX = 0;
+            golpeConectado = false;
+            ejecutarAtaqueEspecial(oponente);
+        }
+        botonEspecialAnterior = botonEspecialAhora;
     }
-    
+
+    /** Lee las entradas del teclado diferenciando entre Jugador 1 y Jugador 2. */
     private void procesarEntradaTeclado(Personaje oponente) {
-        if (estadoActual == Estado.herido) {
+        if (estadoActual == Estado.herido || estadoActual == Estado.muerto) {
             velocidadX = 0;
             return;
         }
+        
         if (!jugador2) {
-            // --- JUGADOR 1: WASD ---
+            // Controles Jugador 1 (WASD + E: Bloquear, S: Agachar, W: Salto, F: Atacar, R: Especial)
             if (Gdx.input.isKeyPressed(Input.Keys.A)) {
                 velocidadX = -velocidad_Movimiento;
                 mirandoIzquierda = true;
-                if (enSuelo && estadoActual != Estado.atacar) {
-                    setEstado(Estado.caminar);
-                }
+                if (enSuelo && !estaOcupado()) setEstado(Estado.caminar);
             } else if (Gdx.input.isKeyPressed(Input.Keys.D)) {
                 velocidadX = velocidad_Movimiento;
                 mirandoIzquierda = false;
-                if (enSuelo && estadoActual != Estado.atacar) {
-                    setEstado(Estado.caminar);
-                }
+                if (enSuelo && !estaOcupado()) setEstado(Estado.caminar);
             } else {
                 velocidadX = 0;
-                if (enSuelo && estadoActual != Estado.agachar && estadoActual != Estado.atacar) {
-                    setEstado(Estado.idle);
-                }
+                if (enSuelo && estadoActual != Estado.agachar && !estaOcupado()) setEstado(Estado.idle);
             }
-            // AGACHARSE (S)
+            
+            if (Gdx.input.isKeyPressed(Input.Keys.E) && enSuelo && !estaOcupado()) {
+                setEstado(Estado.bloquear);
+                velocidadX = 0;
+            } else if (estadoActual == Estado.bloquear && !Gdx.input.isKeyPressed(Input.Keys.E)) {
+                setEstado(Estado.idle);
+            }
+
             if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-                if (enSuelo && estadoActual != Estado.atacar) {
+                if (enSuelo && !estaOcupado()) {
                     setEstado(Estado.agachar);
                     velocidadX = 0;
                 }
             } else {
-                if (estadoActual == Estado.agachar && enSuelo) {
-                    setEstado(Estado.idle);
-                }
+                if (estadoActual == Estado.agachar && enSuelo) setEstado(Estado.idle);
             }
-            // SALTO (W)
-            if (Gdx.input.isKeyJustPressed(Input.Keys.W) && enSuelo) {
+            
+            if (Gdx.input.isKeyJustPressed(Input.Keys.W) && enSuelo && !estaOcupado()) {
                 velocidadY = fuerza_Salto;
                 enSuelo = false;
                 setEstado(Estado.saltar);
             }
-            //ATAQUE
-            if (Gdx.input.isKeyJustPressed(Input.Keys.F) && enSuelo) {
-                if (estadoActual != Estado.atacar) {
-                    if (oponente != null) {
-                        this.mirandoIzquierda = (this.x > oponente.getX());
-                    }
+            
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F) && enSuelo && estadoActual != Estado.bloquear) {
+                if (estadoActual != Estado.atacar && estadoActual != Estado.ataqueEspecial) {
+                    if (oponente != null) this.mirandoIzquierda = (this.x > oponente.getX());
                     combo = 1;
                     setEstado(Estado.atacar);
                     velocidadX = 0;
@@ -228,49 +313,53 @@ public abstract class Personaje {
                 }
             }
             
+            if (Gdx.input.isKeyJustPressed(Input.Keys.R) && enSuelo && !estaOcupado()) {
+                if (oponente != null) this.mirandoIzquierda = (this.x > oponente.getX());
+                setEstado(Estado.ataqueEspecial);
+                velocidadX = 0;
+                golpeConectado = false;
+                ejecutarAtaqueEspecial(oponente);
+            }
         } else {
-            // --- JUGADOR 2: FLECHAS ---
+            // Controles Jugador 2 (Flechas + J: Bloquear, DOWN: Agachar, UP: Salto, K: Atacar, U: Especial)
             if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
                 velocidadX = -velocidad_Movimiento;
                 mirandoIzquierda = true;
-                if (enSuelo && estadoActual != Estado.atacar) {
-                    setEstado(Estado.caminar);
-                }
+                if (enSuelo && !estaOcupado()) setEstado(Estado.caminar);
             } else if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
                 velocidadX = velocidad_Movimiento;
                 mirandoIzquierda = false;
-                if (enSuelo && estadoActual != Estado.atacar) {
-                    setEstado(Estado.caminar);
-                }
+                if (enSuelo && !estaOcupado()) setEstado(Estado.caminar);
             } else {
                 velocidadX = 0;
-                if (enSuelo && estadoActual != Estado.agachar && estadoActual != Estado.atacar) {
-                    setEstado(Estado.idle);
-                }
+                if (enSuelo && estadoActual != Estado.agachar && !estaOcupado()) setEstado(Estado.idle);
             }
-            // AGACHARSE (FLECHA ABAJO)
+            
+            if (Gdx.input.isKeyPressed(Input.Keys.J) && enSuelo && !estaOcupado()) {
+                setEstado(Estado.bloquear);
+                velocidadX = 0;
+            } else if (estadoActual == Estado.bloquear && !Gdx.input.isKeyPressed(Input.Keys.J)) {
+                setEstado(Estado.idle);
+            }
+
             if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
-                if (enSuelo && estadoActual != Estado.atacar) {
+                if (enSuelo && !estaOcupado()) {
                     setEstado(Estado.agachar);
                     velocidadX = 0;
                 }
             } else {
-                if (estadoActual == Estado.agachar && enSuelo) {
-                    setEstado(Estado.idle);
-                }
+                if (estadoActual == Estado.agachar && enSuelo) setEstado(Estado.idle);
             }
-            // SALTO (FLECHA ARRIBA)
-            if (Gdx.input.isKeyJustPressed(Input.Keys.UP) && enSuelo) {
+            
+            if (Gdx.input.isKeyJustPressed(Input.Keys.UP) && enSuelo && !estaOcupado()) {
                 velocidadY = fuerza_Salto;
                 enSuelo = false;
                 setEstado(Estado.saltar);
             }
-            //ATAQUE CON K
-            if (Gdx.input.isKeyJustPressed(Input.Keys.K) && enSuelo) {
-                if (estadoActual != Estado.atacar) {
-                    if (oponente != null) {
-                        this.mirandoIzquierda = (this.x > oponente.getX());
-                    }
+            
+            if (Gdx.input.isKeyJustPressed(Input.Keys.K) && enSuelo && estadoActual != Estado.bloquear) {
+                if (estadoActual != Estado.atacar && estadoActual != Estado.ataqueEspecial) {
+                    if (oponente != null) this.mirandoIzquierda = (this.x > oponente.getX());
                     combo = 1;
                     setEstado(Estado.atacar);
                     velocidadX = 0;
@@ -285,54 +374,36 @@ public abstract class Personaje {
                     }
                 }
             }
+            
+            if (Gdx.input.isKeyJustPressed(Input.Keys.U) && enSuelo && !estaOcupado()) {
+                if (oponente != null) this.mirandoIzquierda = (this.x > oponente.getX());
+                setEstado(Estado.ataqueEspecial);
+                velocidadX = 0;
+                golpeConectado = false;
+                ejecutarAtaqueEspecial(oponente);
+            }
         }
     }
-    
-    
-    //-------------------MRU------------------------------------
-    //MOVIMIENTO RECTILÍNEO UNIFORME
-    //-------------------MRUv-----------------------------------
-    //MOVIMIENTO RECTILÍNEO UNIFORMEMENTE VARIADO
+
+    /** Actualiza las leyes físicas de desplazamiento lateral y gravedad del personaje. */
     public void actualizarFisicas(float delta, float sueloY) {
-    // ---------------------------------------------------------------------
-    // 1. MRUV (Movimiento Rectilíneo Uniforme Variado) - EJE VERTICAL (Y)
-    //----------------------------------------------------------------------
-    // PRINCIPIO FÍSICO: La gravedad actúa como una aceleración constante (g).
-    // FÓRMULA DE LA VELOCIDAD: vf = v0 + a * t
-    // EN CÓDIGO: Delta representa el incremento del tiempo.
-    // Mientras el personaje esté en el aire (!enSuelo), su velocidad vertical no es estática,
-    // sino que disminuye al subir y aumenta al caer debido a esta aceleración constante.
         if (!enSuelo) {
             velocidadY -= gravedad * delta;
-            setEstado(Estado.saltar);
+            if (estadoActual != Estado.muerto) setEstado(Estado.saltar);
         }
-        //SE ACTUALIZAN LAS POSICIONES SUMANDO LA VELOCIDAD MULTIPLICADA POR EL TIEMPO
-        // D = V * T
-        // La velocidad horizontal (velocidadX) es constante mientras se camina, 
-        // generando un desplazamiento lineal y uniforme en la pantalla.
-        x += velocidadX * delta; // -> POSICIÓN HORIZONTAL QUE CAMBIA LINEAL Y UNIFORMEMENTE
         
-        // La posición en 'y' se actualiza utilizando una velocidad que ya fue modificada por la gravedad,
-        // lo que dibuja matemáticamente la trayectoria parabólica del salto.
-        y += velocidadY * delta; // -> MRUV: LA POSICIÓN CAMBIA DEPENDIENDO LA ACELERACIÓN
+        x += velocidadX * delta;
+        y += velocidadY * delta;
 
-        // LÍMITE CON EL SUELO
-        //DETECTA LA COLISIÓN CONTRA EL PISO, DE ESA MANERA LA ANULA
         if (y <= sueloY) {
             y = sueloY;
             velocidadY = 0;
             enSuelo = true;
-            if (velocidadX == 0 && estadoActual == Estado.saltar) {
-                setEstado(Estado.idle);
-            }
+            if (velocidadX == 0 && estadoActual == Estado.saltar) setEstado(Estado.idle);
         }
 
-        // LÍMITES LATERALES
-        if (x < 0) {
-            x = 0;
-        }
+        if (x < 0) x = 0;
         
-        // Obtener el ancho de la textura a partir de la animación idle
         float anchoSprite = 80f;
         if (poseIdle != null) {
             TextureRegion frameIdle = poseIdle.getKeyFrame(0, true);
@@ -342,31 +413,26 @@ public abstract class Personaje {
             }
         }
 
-        float anchoPantallaVirtual = 1920f;
-        float limiteDerecho = anchoPantallaVirtual - anchoSprite;
+        float limiteDerecho = 1920f - anchoSprite;
+        if (x > limiteDerecho) x = limiteDerecho;
 
-        if (x > limiteDerecho) {
-            x = limiteDerecho;
-        }
-        //DECREMENTO TEMPORIZADOR COMBO
         if (combo > 0 && estadoActual != Estado.atacar) {
             temporizadorCombo -= delta;
-            if (temporizadorCombo <= 0) {
-                combo = 0;
-            }
+            if (temporizadorCombo <= 0) combo = 0;
         }
     }
-    //----------------------------------------------------------
-    
-    public Rectangle getHitBox(){
+
+    /** Genera y retorna la caja de colisión física (Hitbox) del cuerpo del personaje. */
+    public Rectangle getHitBox() {
         float altoReal = altoCombate;
         if (estadoActual == Estado.saltar) {
             altoReal = altoCombate * 0.75f;
-        } else if (estadoActual == Estado.agachar){
-            altoReal = 0.65f;
+        } else if (estadoActual == Estado.agachar) {
+            altoReal = altoCombate * 0.65f;
         }
+        
         Animation<TextureRegion> poseActual = poseIdle;
-        switch (estadoActual){
+        switch (estadoActual) {
             case caminar: poseActual = poseCaminar; break;
             case saltar: poseActual = poseSaltar; break;
             case agachar: poseActual = poseAgachado; break;
@@ -381,11 +447,26 @@ public abstract class Personaje {
                 anchoSprite = altoReal * ratio;
             }
         }
-        return new Rectangle(x + 25f, y ,anchoSprite - 50f, altoReal);
+        float anchoHitbox = Math.max(anchoSprite - 50f, 40f);
+        return new Rectangle(x + 25f, y, anchoHitbox, altoReal);
     }
-    
+
+    /** Genera y retorna la caja de colisión del ataque activo según la dirección de la mirada. */
+    public Rectangle getHitboxAtaque() {
+        if (estadoActual != Estado.atacar && estadoActual != Estado.ataqueEspecial) {
+            return new Rectangle(0, 0, 0, 0);
+        }
+        Rectangle hitboxBase = getHitBox();
+        float anchoAtaque = (estadoActual == Estado.ataqueEspecial) ? 95f : 90f;
+        float altoAtaque = 60f;
+        float ataqueY = y + (altoCombate * 0.5f);
+        float ataqueX = mirandoIzquierda ? (hitboxBase.x - anchoAtaque) : (hitboxBase.x + hitboxBase.width);
+        return new Rectangle(ataqueX, ataqueY, anchoAtaque, altoAtaque);
+    }
+
+    /** Renderiza en pantalla el fotograma correspondiente a la animación actual del personaje. */
     public void renderizarPelea(SpriteBatch batch, float delta) {
-        stateTime += delta; // Incrementa el contador de la animación activa
+        stateTime += delta;
         TextureRegion poseActiva = null;
         float altoReal = altoCombate;
         
@@ -393,16 +474,13 @@ public abstract class Personaje {
             case caminar:
                 if (poseCaminar != null) poseActiva = poseCaminar.getKeyFrame(stateTime, true);
                 break;
-
             case saltar:
-                // NormalMente la animación de salto no hace loop (false) para quedarse en el último cuadro
                 if (poseSaltar != null) poseActiva = poseSaltar.getKeyFrame(stateTime, false);
                 altoReal = altoCombate * 0.75f;
                 break;
-
             case agachar:
                 if (poseAgachado != null) poseActiva = poseAgachado.getKeyFrame(stateTime, false);
-                altoReal = altoCombate * 0.65f;               
+                altoReal = altoCombate * 0.65f;
                 break;
             case atacar:
                 Animation<TextureRegion> animacionActual = poseAtacar1;
@@ -420,15 +498,24 @@ public abstract class Personaje {
             case herido:
                 if (poseHerido != null) {
                     poseActiva = poseHerido.getKeyFrame(stateTime, false);
-                    if (poseHerido.isAnimationFinished(stateTime)) {
-                        setEstado(Estado.idle);
-                    }
+                    if (poseHerido.isAnimationFinished(stateTime)) setEstado(Estado.idle);
                 } else {
-                    if (stateTime > 0.25f) {
-                        setEstado(Estado.idle);
-                    }
+                    if (stateTime > 0.25f) setEstado(Estado.idle);
                     if (poseIdle != null) poseActiva = poseIdle.getKeyFrame(stateTime, true);
                 }
+                break;
+            case ataqueEspecial:
+                if (poseAtaqueEspecial != null) {
+                    poseActiva = poseAtaqueEspecial.getKeyFrame(stateTime, false);
+                    if (poseAtaqueEspecial.isAnimationFinished(stateTime)) setEstado(Estado.idle);
+                }
+                break;
+            case bloquear:
+                if (poseBloquear != null) poseActiva = poseBloquear.getKeyFrame(stateTime, true);
+                break;
+            case muerto:
+                if (poseMuerto != null) poseActiva = poseMuerto.getKeyFrame(stateTime, false);
+                altoReal = altoCombate * 0.4f;
                 break;
             case idle:
             default:
@@ -436,37 +523,22 @@ public abstract class Personaje {
                 break;
         }
 
-        // Resguardo si falta alguna animación
         if (poseActiva == null && poseIdle != null) {
             poseActiva = poseIdle.getKeyFrame(stateTime, true);
         }
-
         if (poseActiva == null) return;
 
-        float alto = altoReal;
         float ratio = (float) poseActiva.getRegionWidth() / poseActiva.getRegionHeight();
-        float ancho = alto * ratio;
+        float ancho = altoReal * ratio;
 
         if (mirandoIzquierda) {
-            batch.draw(poseActiva, x + ancho, y, -ancho, alto);
+            batch.draw(poseActiva, x + ancho, y, -ancho, altoReal);
         } else {
-            batch.draw(poseActiva, x, y, ancho, alto);
-        }
-    }
-    
-    public void reproducirSeleccion() {
-        if (seleccion != null) {
-            seleccion.play(1.0f);
+            batch.draw(poseActiva, x, y, ancho, altoReal);
         }
     }
 
-    public ImageButton crearBotonMenu() {
-        TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(icono));
-        ImageButton boton = new ImageButton(drawable);
-        boton.setBounds(menuX, menuY, anchoIcono, altoIcono);
-        return boton;
-    }
-
+    /** Dibuja la representación 2D estática del personaje en los menús de selección. */
     public void renderizarModelo(SpriteBatch batch, float x, float y, float alto) {
         if (render2d != null) {
             float ratio = (float) render2d.getWidth() / render2d.getHeight();
@@ -475,110 +547,54 @@ public abstract class Personaje {
         }
     }
 
-    public Rectangle getHitboxAtaque(){
-        if (estadoActual != Estado.atacar) {
-            return new Rectangle(0, 0, 0, 0);
-        }
-        Rectangle hitboxBase = getHitBox();
-        float anchoAtaque = 90f;
-        float altoAtaque = 60f;
-        float ataqueY = y + (altoCombate * 0.5f);
-        float ataqueX;
-        
-        if (mirandoIzquierda) {
-            ataqueX = x - anchoAtaque;
-        } else {
-            ataqueX = x + hitboxBase.width;
-        }
-        return new Rectangle(ataqueX, ataqueY, anchoAtaque, altoAtaque);
-    }
-    
-    public Texture getRender2d() {
-        return render2d;
+    /** Crea y devuelve el botón interactivo con el icono del personaje para la interfaz de selección. */
+    public ImageButton crearBotonMenu() {
+        TextureRegionDrawable drawable = new TextureRegionDrawable(new TextureRegion(icono));
+        ImageButton boton = new ImageButton(drawable);
+        boton.setBounds(menuX, menuY, anchoIcono, altoIcono);
+        return boton;
     }
 
-    public void setEstado(Estado nuevoEstado) {
-        if (this.estadoActual != nuevoEstado) {
-            this.estadoActual = nuevoEstado;
-            this.stateTime = 0f;
-            
-            if (nuevoEstado == Estado.atacar) {
-                golpeConectado = false;
+    /** Reproduce el efecto sonoro con el nombre del personaje al seleccionarlo. */
+    public void reproducirSeleccion() {
+        if (seleccion != null) seleccion.play(1.0f);
+    }
+
+    /** Aplica daño, reduce la salud y ejecuta retroceso físico (knockback) o mitigación por bloqueo. */
+    public void recibirDaño(float cantidad, boolean atacanteIzquierda) {
+        if (estadoActual == Estado.muerto) return;
+        float dañoFinal = (estadoActual == Estado.bloquear) ? (cantidad * 0.5f) : cantidad;
+
+        this.vida -= dañoFinal;
+        if (this.vida <= 0) {
+            this.vida = 0;
+            setEstado(Estado.muerto);
+            velocidadX = 0;
+            return;
+        }
+
+        if (estadoActual == Estado.bloquear) {
+            velocidadX = 0;
+        } else {
+            setEstado(Estado.herido);
+            velocidadX = 0;
+            float fuerzaRetroceso = 40f;
+            if (atacanteIzquierda) {
+                x += fuerzaRetroceso;
+            } else {
+                x -= fuerzaRetroceso;
             }
         }
     }
 
-    public Estado getEstado() {
-        return this.estadoActual;
-    }
-
-    public void setPosicion(float x, float y) {
-        this.x = x;
-        this.y = y;
-    }
-
-    public void setX (float x){
-        this.x = x;
-    }
-    public float getX() {
-        return x;
-    }
-
-    public float getY() {
-        return y;
-    }
-    
-    //--------------------------MRUV-----------------------------------
-    public void recibirDaño (float cantidad, boolean atacanteIzquierda){
-        //Se resta la cantidad de daño a la vida total asegurando que no baje de 0
-        this.vida -= cantidad;
-        if (this.vida < 0) this.vida = 0;
-        //Se actualiza el estado a 'herido', de esa manera bloqueamos acciones
-        setEstado(Estado.herido);
-        velocidadX = 0;
-        
-        //Simula una fuerza externa instantánea, para transferirla
-        // Se transfiere al personaje, de esa manera provocamos un desplzamiento en el eje x
-        // DE ESTA MANERA TIENE UNA VELOCIDAD INICIAL DE RETROCESO
-        // Podriamos tratar de averiguar, la velocidad final, la distancia que recorrerá y su aceleración
-        float fuerzaRetroceso = 40f;
-        if (atacanteIzquierda) {
-            x += fuerzaRetroceso;
-        } else {
-            x -= fuerzaRetroceso;
-        }
-    }
-    public float getVida (){
-        return vida;
-    }
-    public void setVida (float vida){
-        this.vida = vida;
-    }
-    public boolean getGolpeConectado(){
-        return golpeConectado;
-    }
-    public void setGolpeConectado(boolean golpeConectado) {
-        this.golpeConectado = golpeConectado;
-    }
-    public int getCombo (){
-        return combo;
-    }
-    public String getNombre (){
-        return this.nombre;
-    }
-    
+    /** Libera los recursos de texturas y sonidos almacenados en memoria RAM y GPU. */
     public void dispose() {
-        if (icono != null) {
-            icono.dispose();
-        }
-        if (render2d != null) {
-            render2d.dispose();
-        }
-        if (seleccion != null) {
-            seleccion.dispose();
-        }
-        for (Texture t : texturasCombate){
+        if (icono != null) icono.dispose();
+        if (render2d != null) render2d.dispose();
+        if (seleccion != null) seleccion.dispose();
+        for (Texture t : texturasCombate) {
             if (t != null) t.dispose();
         }
+        texturasCombate.clear();
     }
 }

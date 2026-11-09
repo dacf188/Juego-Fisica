@@ -31,8 +31,15 @@ public class EllieWiliams extends Personaje{
         Texture ataque3 = new Texture(Gdx.files.internal("Renders2D/Ellie/ataque3.png"));
     //HERIDO
         Texture herido = new Texture(Gdx.files.internal("Renders2D/Ellie/daño.png"));
+    //BLOQUEO
+       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D/Ellie/bloqueo.png"));
+    //MUERTE
+        Texture muerto = new Texture(Gdx.files.internal("Renders2D/Ellie/muerte1.png"));
+        Texture muerto1 = new Texture(Gdx.files.internal("Renders2D/Ellie/muerte2.png"));
+    //GOLPE ESPECIAL
+        Texture especial = new Texture(Gdx.files.internal("Renders2D/Ellie/especial.png"));
         
-        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido);
+        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, muerto1, especial);
     
         Array<TextureRegion> framesCaminar = new Array<>();
         framesCaminar.add(new TextureRegion(cam1));
@@ -53,6 +60,22 @@ public class EllieWiliams extends Personaje{
         this.poseAtacar2 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque2));
         this.poseAtacar3 = new Animation<TextureRegion>(0.35f, new TextureRegion(ataque3));
         
-        this.poseHerido = new Animation<>(1f, new TextureRegion(herido));
+        this.poseHerido = new Animation<TextureRegion>(0.25f, new TextureRegion(herido));
+        this.poseBloquear = new Animation<TextureRegion>(1f, new TextureRegion(bloqueo));
+        
+        Array<TextureRegion> frameMuerte = new Array<>();
+        frameMuerte.add(new TextureRegion(muerto));
+        frameMuerte.add(new TextureRegion(muerto1));
+        this.poseMuerto = new Animation<TextureRegion>(0.25f, frameMuerte, Animation.PlayMode.NORMAL);
+        
+        this.poseAtaqueEspecial = new Animation<TextureRegion>(0.3f, new TextureRegion(especial));
+    }
+    @Override
+    public void ejecutarAtaqueEspecial(Personaje oponente){
+        if (oponente != null && getHitboxAtaque().overlaps(oponente.getHitBox())) {
+            boolean atacanteIzquierda = this.x < oponente.getX();
+            oponente.recibirDaño(dañoEspecial, atacanteIzquierda);
+            golpeConectado = true;
+        }
     }
 }

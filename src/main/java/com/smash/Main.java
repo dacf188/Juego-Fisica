@@ -1,125 +1,107 @@
-//PAQUETE COMUN Y CORRIENTE QUE SIEMPRE HEMOS USADO
 package com.smash;
 
-//CLASE BASE PARA MANEJAR EL CICLO DE VIDA DE LA APLICACIÓN
 import com.badlogic.gdx.Game;
-//CARGA LAS IMAGENES EN LA GPU
 import com.badlogic.gdx.graphics.Texture;
-//SE ENCARGA DE DIBUJAR LAS TEXTURAS 2D AGUPRANDOLAS EN LA PANTALLA
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-//LIMPIA O RELLENA EL FONDO DE LA PANTALLA
 import com.badlogic.gdx.utils.ScreenUtils;
-//MANDO CENTRAL DE LAS OPERACIONES (DIME PANTALLA, ENTRADAS, ARCHIVOS, AUDIO, CICLO APP)
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-//CLASE BASE PARA ELEMENTOS DE LA INTERFAZ
 import com.badlogic.gdx.scenes.scene2d.Actor;
-//CONTENEDOR PRINCIPAL DE BOTONES Y UI
 import com.badlogic.gdx.scenes.scene2d.Stage;
-//ORGANIZA LOS ELEMENTOS EN PANTALLA
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-//ESCUCHA EL CLIC DEL USUARIO
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-//ADAPTA LA UI A LA VENTANA
 import com.badlogic.gdx.utils.viewport.FillViewport;
-//-----------------------------------------------
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-//------------------------------
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.audio.Music;
-
+import com.badlogic.gdx.controllers.Controllers;
+import com.badlogic.gdx.controllers.Controller;
 
 public class Main extends Game {
-    //TIPOS DE DATOS
-    // MODI ACCESO - TIPO DATO - NOMBRE VARIABLE
-    //OPTIMIZACIÓN Y COORDINACIÓN DE GRÁFICOS 2d
-    //TOMA LAS IMAGANES PARA REDIRECCIONARLAS A LA PANTALLA
+
+    // Renderizador global para gráficos 2D en pantalla
     private SpriteBatch batch;
-    //TEXTURE INDICA UNA IMAGEN EN 2D CARGADA CON LA GPU
+    // Textura para la imagen de fondo del menú principal
     private Texture image;
+    // Escenario principal para gestionar la interfaz de usuario (UI)
     private Stage stage;
-    //VARIABLES PARA EL BOTÓN
+    // Texturas para los estados visuales del botón de comenzar
     private Texture botonNormal;
     private Texture botonMouse;
-    //VARIABLES PARA TRANSICIONAR
+    // Textura auxiliar para generar el efecto de fundido (transición)
     private Texture transicionTexture;
-    //OPACIDAD DE LA TRANSICIÓN
+    
+    // Control de la opacidad y estado de la transición entre pantallas
     private float alfaTransicion = 0f;
-    //CUANDO DEBERÁ OSCURECERSE
     private boolean realizandoTransicion = false;
+    // Pista de audio para la música de fondo del menú
     private Music musicafondo;
+    // Botón interactivo para iniciar el flujo del juego
     private ImageButton botonComenzar;
+    // Bandera de control para evitar clics múltiples o duplicados
     private boolean bloquarClic = false;
 
     @Override
     public void create() {
-        //REALIZAMOS LA INSTANCIA DE OBJETOS INDISPENSABLES UNO
-        //PARA QUE ENVÍE LA IMAGEN Y EL OTRO LA MISMA IMAGEN
-        //ENVIA LAS IMAGANES A LA GPU
+        // Inicialización de herramientas gráficas y recursos iniciales
         batch = new SpriteBatch();
-        //IMAGEN DE FONDO
         image = new Texture("PosibilidadFondo.png");
         
+        // Configuración y reproducción de la música de fondo
         musicafondo = Gdx.audio.newMusic(Gdx.files.internal("Musica/CancionMenu.mp3"));
         musicafondo.setLooping(true);
         musicafondo.setVolume(0.5f);
         musicafondo.play();
         
-        //CONTROL DE CLICS Y TECLADO
-        //PREPARA AL ESCENARIO PARA RECIBIR BOTONES
+        // Configuración del escenario y procesador de entradas
         stage = new Stage(new FillViewport(1920, 1080));
         Gdx.input.setInputProcessor(stage);
         
-        //CARGAR IMAGENES DE BOTÓN
+        // Carga de texturas de imagen para el botón de inicio
         botonNormal = new Texture("Pcomenzar.png");
         botonMouse = new Texture("PcomenzarMouse.png");
-        //CREA LOS DRAWABLES
-        //------------------------------------
+        
+        // Creación de componentes gráficos legibles para el ImageButton
         TextureRegionDrawable drawableNormal = new TextureRegionDrawable(new TextureRegion(botonNormal));
         TextureRegionDrawable drawableMouse = new TextureRegionDrawable(new TextureRegion(botonMouse));
-        //CREAR EL ESTILO DEL BOTON USANDO LAS IMAGENES EN LUGAR DE TEXTO
+        
         ImageButton.ImageButtonStyle buttonStyle = new ImageButton.ImageButtonStyle();
-        buttonStyle.imageUp = drawableNormal; //ESTADO NORMAL
-        buttonStyle.imageOver = drawableMouse; //ESTADO CUANDO PASA EL MOUSE
-        //INSTANCIAMOS EL IMAGE BUTTON
+        buttonStyle.imageUp = drawableNormal;
+        buttonStyle.imageOver = drawableMouse;
         botonComenzar = new ImageButton(buttonStyle);
         
-        //CREAMOS LA TEXTURA
-        //DIBUJA UNA IMAGEN DIRECTAMENTE DE LA RAM
+        // Generación de una textura negra de 1x1 píxel para efectos de transición
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.BLACK);
         pixmap.fill();
         transicionTexture = new Texture(pixmap);
         pixmap.dispose();
         
-        //ASIGNAMOS EL LISTENER PARA QUE SE DETECTE EL CLIC DEL USUARIO Y SE CAMBIE LA PANTALLA
+        // Listener del botón para manejar eventos de clic del usuario
         botonComenzar.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                if (bloquarClic) {
-                    return;
-                }
-                //ENCENDEMOS EL INTERRUPTOR DE LA TRANSICIÓN
+                if (bloquarClic) return;
                 realizandoTransicion = true;
-                //DESACTIVAMOS EL BOTÓN PARA EVITAR MULTIPLES CLICS
                 botonComenzar.setDisabled(true);
             }
         });
-        //POSICIONAMOS EL BOTON EN LA PARTE INFERIOR
+        
+        // Distribución y alineación del botón en la interfaz mediante Table
         Table table = new Table();
         table.setFillParent(true);
-        //ALINEACIÓN DEL BOTÓN
         table.bottom().padBottom(0);
         table.add(botonComenzar).width(300).height(400);
-        //----------------------
+        
         stage.addActor(table);
+        AdministradorMando.reiniciarEstados();
     }
 
-    public void volverMenu (){
+    /** Restaura los valores iniciales y la música al regresar al menú principal. */
+    public void volverMenu() {
         setScreen(null);
-        
         realizandoTransicion = false;
         alfaTransicion = 0f;
         bloquarClic = true;
@@ -129,52 +111,68 @@ public class Main extends Game {
             botonComenzar.setChecked(false);
         }
         Gdx.input.setInputProcessor(stage);
+        
         if (musicafondo == null) {
             musicafondo = Gdx.audio.newMusic(Gdx.files.internal("Musica/CancionMenu.mp3"));
             musicafondo.setLooping(true);
             musicafondo.setVolume(0.5f);
             musicafondo.play();
         }
+        AdministradorMando.reiniciarEstados();
     }
     
     @Override
     public void render() {
-        //SE ENCARGA DE DIFERENCIAR ENTRE LA PANTALLA PRINCIPAL Y LA NUEVA
+        // Control de flujo: si no hay pantalla activa, se renderiza el menú principal
         if (getScreen() == null) {
-            //LIMPIA EL FOTOGRAMA ANTERIOR Y SE ENFOCA EN RGBA
             ScreenUtils.clear(0.10f, 0.10f, 0.10f, 1f);
             
             if (bloquarClic) {
                 bloquarClic = false;
             }
-            //PREPARAMOS EL ENVIO DE LA IMAGEN
+            
+            // Detección de interacción por mando (Gamepad) en el menú principal
+            Controller mandoJ1 = Controllers.getControllers().size > 0 ? Controllers.getControllers().get(0) : null;
+            if (mandoJ1 != null && !realizandoTransicion && !bloquarClic) {
+                if (AdministradorMando.esConfirmar(mandoJ1)) {
+                    realizandoTransicion = true;
+                    if (botonComenzar != null) {
+                        botonComenzar.setDisabled(true);
+                        botonComenzar.setChecked(true);
+                        TextureRegionDrawable drawableMouse = new TextureRegionDrawable(new TextureRegion(botonMouse));
+                        ImageButton.ImageButtonStyle estiloPresionado = new ImageButton.ImageButtonStyle();
+                        estiloPresionado.imageUp = drawableMouse;
+                        estiloPresionado.imageOver = drawableMouse;
+                        estiloPresionado.imageDown = drawableMouse;
+                        botonComenzar.setStyle(estiloPresionado);
+                    }
+                }
+            }
+            
+            // Renderizado de la imagen de fondo del menú
             batch.begin();
-            //AGREGA LA IMAGEN Y SU POSICION EN "X" Y "Y"
             batch.draw(image, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-            //INDICAR QUE YA TERMINÓ EL PASO DE IMAGEN
             batch.end();
-            //DETECTA SI EL PUNTERO DEL MOUSE ESTÁ ENCIMA DEL BOTÓN
+            
+            // Actualización y dibujo de los elementos de la interfaz de usuario
             stage.act(Gdx.graphics.getDeltaTime());
-            //PONE EL BOTÓN ENCIMA DE LA IMAGEN DEL FONDO
             stage.draw();
             
+            // Ejecución y cálculo visual del desvanecimiento (Fade-out)
             if (realizandoTransicion) {
-                //CONTROLA LA VELOCIDAD DE LA TRANSICIÓN
-                //TIEMPO ENTRE UN FOTOGRAMA Y OTRO
                 alfaTransicion += Gdx.graphics.getDeltaTime() * 1.0f;
                 batch.begin();
-                //QUE LA TRANSICIÓN SEA GRADUAL, ADEMÁS DE ASEGURAR QUE NO PASE DE 1
                 batch.setColor(1, 1, 1, Math.min(alfaTransicion, 1.0f));
                 batch.draw(transicionTexture, 0, 0, stage.getWidth(), stage.getHeight());
-                //LIMPIAMOS EL COLOR PARA NO AFECTAR SIGUEINTES FOTOGRAMAS
                 batch.setColor(1, 1, 1, 1);
                 batch.end();
-                //AL MOMENTO QUE YA NO SE VEA LA PANTALLA SEGUIRÁ CON LA NUEVA PANTALLA
+                
+                // Al finalizar la transición, se libera el audio y se cambia a la pantalla de selección
                 if (alfaTransicion >= 1.0f) {
                     if (musicafondo != null) {
                         musicafondo.stop();
                         musicafondo.dispose();
-                        musicafondo = null; // Asignamos null para evitar crash por doble liberación
+                        musicafondo = null;
                     }
                     realizandoTransicion = false;
                     alfaTransicion = 0f;
@@ -182,46 +180,39 @@ public class Main extends Game {
                 }
             }
         } else {
-            //PASAMOS A LA NUEVA PANTALLA
-            //NO SERÁ NULO YA QUE PRESIONÓ EL BOTON EL USUARIO
+            // Delegación del ciclo de renderizado a la pantalla activa secundaria
             super.render();
         }
     }
 
     @Override
-    //SE ENCARGA DE REDIMENSIONAR LA PANTALLA AL MOMENTO QUE EL USUARIO AGRANDE
-    public void resize (int width, int height){
-        //DEFINE AREA DE RENDERIZADO Y CUAL ES EL NUEVO TAMAÑO
+    /** Ajusta las dimensiones del viewport y matrices al redimensionar la ventana. */
+    public void resize(int width, int height) {
         Gdx.gl.glViewport(0, 0, width, height);
-        //RECONFIGURA LA MATRIZ 2D INTERNA
         batch.getProjectionMatrix().setToOrtho2D(0, 0, width, height);
-        
-        //REAJUSTAMOS LA VENTANA PARA LA INTERFAZ Y LAS PANTALLAS
-        //RECALCULA LA POSICIÓN DEL BOTÓN
         stage.getViewport().update(width, height, true);
-        //NOTIFICA EL CAMBIO DE PANTALLA
+        
         if (getScreen() != null) {
             getScreen().resize(width, height);
         }
     }
     
-    public SpriteBatch getBatch(){
-        //PERMITE QUE ACCEDA AL OBJETO SIN ROMPER LA VISIBILIDAD
+    /** Retorna la instancia global del SpriteBatch para su uso en otras pantallas. */
+    public SpriteBatch getBatch() {
         return batch;
     }
     
-    
     @Override
+    /** Libera todos los recursos cargados en memoria y GPU al cerrar la aplicación. */
     public void dispose() {
-        //LIMIPIAN RAM Y GPU
         batch.dispose();
         image.dispose();
         stage.dispose();
         botonNormal.dispose();
         botonMouse.dispose();
-        //LIMPIEZA DE MEMORIA
+        
         if (transicionTexture != null) transicionTexture.dispose();
-        //SI NO SE ESCRIBEN ESTAS INSTRUCCIONES HABRÁ UNA FUGA DE MEMORIA
+        
         if (musicafondo != null) {
             musicafondo.dispose();
             musicafondo = null;
