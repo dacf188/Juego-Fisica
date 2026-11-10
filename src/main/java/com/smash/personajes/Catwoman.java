@@ -14,31 +14,32 @@ public class Catwoman extends Personaje{
     @Override
     public void cargarPosesCombate (){
      //CAMINAR
-        Texture cam1 = new Texture(Gdx.files.internal("Renders2D//.png"));
-        Texture cam2 = new Texture(Gdx.files.internal("Renders2D//.png"));
-        Texture cam3 = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture cam1 = new Texture(Gdx.files.internal("Renders2D/Catwoman/caminar1.png"));
+        Texture cam2 = new Texture(Gdx.files.internal("Renders2D/Catwoman/caminar2.png"));
+        Texture cam3 = new Texture(Gdx.files.internal("Renders2D/Catwoman/caminar3.png"));
     //SALTO
-        Texture salto1 = new Texture(Gdx.files.internal("Renders2D//.png"));
-        Texture salto2 = new Texture(Gdx.files.internal("Renders2D//.png"));
-        Texture salto3 = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture salto1 = new Texture(Gdx.files.internal("Renders2D/Catwoman/salto1.png"));
+        Texture salto2 = new Texture(Gdx.files.internal("Renders2D/Catwoman/salto2.png"));
+        Texture salto3 = new Texture(Gdx.files.internal("Renders2D/Catwoman/salto3.png"));
     //AGACHARSE
-        Texture agachar = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture agachar = new Texture(Gdx.files.internal("Renders2D/Catwoman/agachar.png"));
     //IDLE
-        Texture idle = new Texture(Gdx.files.internal("Renders2D/.png"));
+        Texture idle = new Texture(Gdx.files.internal("Renders2D/Catwoman/idle.png"));
     ///ATAQUES COMBO
-        Texture ataque1 = new Texture(Gdx.files.internal("Renders2D//ataque1.png"));
-        Texture ataque2 = new Texture(Gdx.files.internal("Renders2D//ataque2.png"));
-        Texture ataque3 = new Texture(Gdx.files.internal("Renders2D//ataque3.png"));
+        Texture ataque1 = new Texture(Gdx.files.internal("Renders2D/Catwoman/ataque1.png"));
+        Texture ataque2 = new Texture(Gdx.files.internal("Renders2D/Catwoman/ataque2.png"));
+        Texture ataque3 = new Texture(Gdx.files.internal("Renders2D/Catwoman/.png"));
     //HERIDO
-        Texture herido = new Texture(Gdx.files.internal("Renders2D//herido.png"));
+        Texture herido = new Texture(Gdx.files.internal("Renders2D/Catwoman/herido.png"));
     //BLOQUEO
-       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D//bloqueo.png"));
+       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D/Catwoman/bloqueo.png"));
     //MUERTE
-        Texture muerto = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture muerto = new Texture(Gdx.files.internal("Renders2D/Catwoman/muerte1.png"));
+        Texture muerto1 = new Texture(Gdx.files.internal("Renders2D/Catwoman/muerte2.png"));
     //GOLPE ESPECIAL
-        Texture especial = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture especial = new Texture(Gdx.files.internal("Renders2D/Catwoman/especial.png"));
         
-        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, especial);
+        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, muerto1, especial);
     
         Array<TextureRegion> framesCaminar = new Array<>();
         framesCaminar.add(new TextureRegion(cam1));
@@ -61,11 +62,20 @@ public class Catwoman extends Personaje{
         
         this.poseHerido = new Animation<TextureRegion>(0.25f, new TextureRegion(herido));
         this.poseBloquear = new Animation<TextureRegion>(1f, new TextureRegion(bloqueo));
-        this.poseMuerto = new Animation<TextureRegion>(1f, new TextureRegion(muerto));
+        
+        Array<TextureRegion> frameMuerte = new Array<>();
+        frameMuerte.add(new TextureRegion(muerto));
+        frameMuerte.add(new TextureRegion(muerto1));
+        this.poseMuerto = new Animation<TextureRegion>(0.25f, frameMuerte);
+        
         this.poseAtaqueEspecial = new Animation<TextureRegion>(0.3f, new TextureRegion(especial));
     }
     @Override
     public void ejecutarAtaqueEspecial(Personaje oponente) {
-
+        if (oponente != null && getHitboxAtaque().overlaps(oponente.getHitBox())) {
+            boolean atacanteIzquierda = this.x < oponente.getX();
+            oponente.recibirDaño(dañoEspecial, atacanteIzquierda);
+            golpeConectado = true;
+        }
     }
 }

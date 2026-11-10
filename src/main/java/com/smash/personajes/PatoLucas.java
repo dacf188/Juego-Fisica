@@ -14,31 +14,32 @@ public class PatoLucas extends Personaje{
     @Override
     public void cargarPosesCombate (){
      //CAMINAR
-        Texture cam1 = new Texture(Gdx.files.internal("Renders2D//caminar1.png"));
-        Texture cam2 = new Texture(Gdx.files.internal("Renders2D//caminar2.png"));
-        Texture cam3 = new Texture(Gdx.files.internal("Renders2D//caminar3.png"));
+        Texture cam1 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/caminar1.png"));
+        Texture cam2 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/caminar2.png"));
+        Texture cam3 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/caminar3.png"));
     //SALTO
-        Texture salto1 = new Texture(Gdx.files.internal("Renders2D//saltar1.png"));
-        Texture salto2 = new Texture(Gdx.files.internal("Renders2D//saltar2.png"));
-        Texture salto3 = new Texture(Gdx.files.internal("Renders2D//saltar3.png"));
+        Texture salto1 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/salto1.png"));
+        Texture salto2 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/salto2.png"));
+        Texture salto3 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/salto3.png"));
     //AGACHARSE
-        Texture agachar = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture agachar = new Texture(Gdx.files.internal("Renders2D/PatoLucas/agachar.png"));
     //IDLE
-        Texture idle = new Texture(Gdx.files.internal("Renders2D//idle.png"));
+        Texture idle = new Texture(Gdx.files.internal("Renders2D/Render2dPatoLucas.png"));
     ///ATAQUES COMBO
-        Texture ataque1 = new Texture(Gdx.files.internal("Renders2D//ataque1.png"));
-        Texture ataque2 = new Texture(Gdx.files.internal("Renders2D//.png"));
-        Texture ataque3 = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture ataque1 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/ataque1.png"));
+        Texture ataque2 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/ataque2.png"));
+        Texture ataque3 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/ataque3.png"));
     //HERIDO
-        Texture herido = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture herido = new Texture(Gdx.files.internal("Renders2D/PatoLucas/herido.png"));
     //BLOQUEO
-       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D//.png"));
+       Texture bloqueo = new Texture(Gdx.files.internal("Renders2D/PatoLucas/bloqueo.png"));
     //MUERTE
-        Texture muerto = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture muerto = new Texture(Gdx.files.internal("Renders2D/PatoLucas/muerte1.png"));
+        Texture muerto1 = new Texture(Gdx.files.internal("Renders2D/PatoLucas/muerte2.png"));
     //GOLPE ESPECIAL
-        Texture especial = new Texture(Gdx.files.internal("Renders2D//.png"));
+        Texture especial = new Texture(Gdx.files.internal("Renders2D/PatoLucas/especial.png"));
         
-        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, especial);
+        texturasCombate.addAll(cam1, cam2, cam3, salto1, salto2, salto3, agachar, idle, ataque1, ataque2, ataque3, herido, bloqueo, muerto, muerto1, especial);
     
         Array<TextureRegion> framesCaminar = new Array<>();
         framesCaminar.add(new TextureRegion(cam1));
@@ -61,11 +62,20 @@ public class PatoLucas extends Personaje{
         
         this.poseHerido = new Animation<TextureRegion>(0.25f, new TextureRegion(herido));
         this.poseBloquear = new Animation<TextureRegion>(1f, new TextureRegion(bloqueo));
-        this.poseMuerto = new Animation<TextureRegion>(1f, new TextureRegion(muerto));
+        
+        Array<TextureRegion> frameMuerte = new Array<>();
+        frameMuerte.add(new TextureRegion(muerto));
+        frameMuerte.add(new TextureRegion(muerto1));
+        this.poseMuerto = new Animation<TextureRegion>(0.25f, frameMuerte);
+        
         this.poseAtaqueEspecial = new Animation<TextureRegion>(0.3f, new TextureRegion(especial));
     }
     @Override
     public void ejecutarAtaqueEspecial(Personaje oponente) {
-
+        if (oponente != null && getHitboxAtaque().overlaps(oponente.getHitBox())) {
+            boolean atacanteIzquierda = this.x < oponente.getX();
+            oponente.recibirDaño(dañoEspecial, atacanteIzquierda);
+            golpeConectado = true;
+        }
     }
 }
